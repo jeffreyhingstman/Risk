@@ -54,8 +54,8 @@ class Player():
                 self.ask_reinforce()
                 Finished = True
             elif option == 2:  
-                self.ask_attack_fromto()
-                Finished = True
+                frm, to, confirmAttack = self.ask_attack_fromto()
+                Finished = confirmAttack
         self.ask_info()
         input("----- End of turn. Press a key to continue. -----")
     def ask_option(self):
@@ -101,7 +101,10 @@ class Player():
         while not validArmies:
             try:
                 armiesToAdd = int(input("[Q] How many armies to add to {}?\n\t".format(city)))
-                if armiesToAdd <= armiesLeftToAdd and armiesToAdd >= 0:
+                if armiesToAdd == 0:
+                    print("Cancelled reinforcing")
+                    break
+                elif armiesToAdd <= armiesLeftToAdd and armiesToAdd >= 0:
                     cityObj = Region.get_vertex(city)
                     cityObj.add_armies(armiesToAdd)
                     print("[Info] Successful. Armies now in {}: ".format(city), cityObj.armies)
@@ -123,33 +126,38 @@ class Player():
 
     def ask_attack_fromto(self):
         print("Owned cities: ", self.owned_cities()) 
-        validFrom   = False
-        validTo     = False
-        validFromTo = False
+        validFrom       = False
+        validTo         = False
+        confirmAttack   = False
+        frm             = ''
+        to              = ''
         try:
             while not validFrom:
                 frm = input("From which city do you want to attack: \n\t--> ")
-                if Region.get_vertex_owner(frm) != self.id:
+                if frm == '':
+                    break
+                elif Region.get_vertex_owner(frm) != self.id:
                     print("[Invalid] Attempting to attack from city that is not owned by you!") 
                 else:
                     validFrom = True
-            while not (validTo and validFromTo):
-                print("Attackable cities from {}: ".format(frm), self.get_attackable_from(frm))
-                to = input("Which city do you want to attack: \n\t--> ")
-                if Region.get_vertex_owner(to) == self.id:
-                    print("[Invalid] Attempting to attack city that is owned by you!")
-                else:
-                    validTo = True
-                if to not in Region.get_vertex_list(frm):
-                    print("[Invalid] Attempting to attack city that is not adjacent")
-                else:
-                    validFromTo = True
-            print("Player {} attacks {} from {}".format(self.id, to, frm))
+                while (not validTo) and validFrom:
+                    print("Attackable cities from {}: ".format(frm), self.get_attackable_from(frm))
+                    to = input("Which city do you want to attack: \n\t--> ")
+                    if to == '':
+                        break 
+                    elif Region.get_vertex_owner(to) == self.id:
+                        print("[Invalid] Attempting to attack city that is owned by you!")
+                    elif to not in Region.get_vertex_list(frm):
+                        print("[Invalid] Attempting to attack city that is not adjacent")
+                    else:
+                        validTo = True
+                        print("Player {} attacks {} from {}".format(self.id, to, frm))
+                        confirmAttack = True
 
         except Exception:
             print("no valid city given!")
             pass
-        return frm, to
+        return frm, to, confirmAttack
 
     def get_attackable_from(self, frm):
         attackable = []
@@ -169,11 +177,11 @@ class Player():
         return Region.get_players_vertices(self.id)
 
 class Vertex:
-    def __init__(self, name, ownedBy):
+    def __init__(self, name, ownedBy, armies):
         self.name       = name
         self.ownedBy    = ownedBy
         self.adjacent   = {}
-        self.armies     = 0
+        self.armies     = armies
     def __str__(self):
         return str(self.name) + ' adjacent: ' + str([x.name for x in self.adjacent])
 
@@ -201,9 +209,9 @@ class Graph:
     def __iter__(self):
         return iter(self.vert_dict.values())
 
-    def add_vertex(self, node, ownedBy):
+    def add_vertex(self, node, ownedBy, armies):
         self.num_vertices = self.num_vertices + 1
-        new_vertex = Vertex(node, ownedBy)
+        new_vertex = Vertex(node, ownedBy, armies)
         self.vert_dict[node] = new_vertex
         return new_vertex
 
@@ -240,10 +248,10 @@ class Graph:
 
 Region = Graph()
 
-Region.add_vertex('Groningen', 0)  
-Region.add_vertex('Delfzijl', 0)  
-Region.add_vertex('Leeuwarden', 1)
-Region.add_vertex('Assen',  2)
+Region.add_vertex('Groningen', 0, 5)  
+Region.add_vertex('Delfzijl', 0, 5)  
+Region.add_vertex('Leeuwarden', 1, 10)
+Region.add_vertex('Assen',  2, 10)
 
 Region.add_edge('Groningen', 'Delfzijl')
 Region.add_edge('Groningen', 'Leeuwarden')
