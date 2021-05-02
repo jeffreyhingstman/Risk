@@ -1,4 +1,5 @@
 import os
+import random
 
 NR_OF_PLAYERS           = 3
 ADDED_ARMIES_PER_TURN   = 10
@@ -42,8 +43,7 @@ class Player():
     Keeps track of a player's info, and what it should do in a turn
     '''
     def __init__(self, id):
-        self.armies     = 10
-        self.id         = id
+        self.id = id
 
     def run(self):
         Finished        = False
@@ -54,10 +54,12 @@ class Player():
                 self.ask_reinforce()
                 Finished = True
             elif option == 2:  
-                frm, to, confirmAttack = self.ask_attack_fromto()
-                Finished = confirmAttack
+                frm, to, confirmedAttack = self.ask_attack_fromto()
+                if confirmedAttack:
+                    Finished = self.battle(frm, to)
         self.ask_info()
         input("----- End of turn. Press a key to continue. -----")
+
     def ask_option(self):
         optionValid = False
         while not optionValid:
@@ -74,6 +76,28 @@ class Player():
                 pass
         return userInput
     
+    def battle(self, frm, to):
+        validAttackAmount   = False
+        availableArmies     = Region.get_vertex_armies(frm) - 1
+        while not validAttackAmount:
+            amountAttack = int(input("How many armies to attack {}\n\t".format(to)))
+            if amountAttack > availableArmies  or amountAttack <= 0:
+                print("Invalid amount of armies to attack with. ")
+            else:
+                validAttackAmount = True
+        if validAttackAmount:
+            win = bool(random.randint(0,1))
+        if win: #todo
+            Region.set_vertex_armies(to, amountAttack)
+            Region.set_vertex_owner(to, self.id)
+            print("Player {} has won {}, {} armies placed. ".format(self.id, to, amountAttack))
+        else:
+            print("lost battle... ")
+        Finished = False
+        print("battling")
+        Finished = True
+        return Finished
+
     def ask_info(self):      
         print("\n")          
         for city in self.owned_cities():
@@ -138,6 +162,8 @@ class Player():
                     break
                 elif Region.get_vertex_owner(frm) != self.id:
                     print("[Invalid] Attempting to attack from city that is not owned by you!") 
+                elif Region.get_vertex_armies(frm) <= 1:
+                    print("[Invalid] Not enough armies available to attack with. ")
                 else:
                     validFrom = True
                 while (not validTo) and validFrom:
@@ -230,7 +256,21 @@ class Graph:
             return self.vert_dict[name].ownedBy 
         else:
             return None
+
+    def get_vertex_armies(self, name):
+        if name in self.vert_dict:
+            return self.vert_dict[name].armies
+        else:
+            return None
+
+    def set_vertex_armies(self, name, value):
+        if name in self.vert_dict:
+            self.vert_dict[name].armies = value
     
+    def set_vertex_owner(self, name, player):
+        if name in self.vert_dict:
+            self.vert_dict[name].ownedBy = player
+
     def get_players_vertices(self, player):
         playersVertices = []
         for name in self.vert_dict:
@@ -256,10 +296,6 @@ Region.add_vertex('Assen',  2, 10)
 Region.add_edge('Groningen', 'Delfzijl')
 Region.add_edge('Groningen', 'Leeuwarden')
 Region.add_edge('Groningen', 'Assen')
-
-#print("vertex list: ", Region.get_vertex_list('Groningen'))
-#print(Region.get_vertex('Assen'))
-#print(Region.get_vertex_owner('Groningen'))
 
 manager = Manager(NR_OF_PLAYERS)
 while True:
