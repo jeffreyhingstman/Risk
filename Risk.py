@@ -1,5 +1,6 @@
 
-NR_OF_PLAYERS   = 4
+NR_OF_PLAYERS           = 4
+ADDED_ARMIES_PER_TURN   = 10
 
 class Manager():
     '''
@@ -49,19 +50,22 @@ class Player():
         strategy = self.ask_strategy()
         print("Player {} chose strategy: {}".format(self.id, strategy))
 
-        if strategy == 1:   # attack strategy
+        if strategy == 1:
+            self.ask_reinforce()
+
+        elif strategy == 2:   # attack strategy
             self.ask_attack_fromto()
 
         self.Finished = True
 
     def ask_strategy(self):
         strategyValid = False
-        while strategyValid == False:
+        while not strategyValid:
             try:
                 userInput = int(input(\
 "Choose a strategy:\
-\n1) attack\
-\n2) add troops\n\t--> "))  # 1=attack, 2=add troops
+\n1) Reinforce armies\
+\n2) Attack\n\t--> "))  
 
                 strategyValid = True
             except Exception:
@@ -69,6 +73,41 @@ class Player():
                 pass
         return userInput
     
+    def ask_reinforce(self):
+        ownedCities = Region.get_players_vertices(self.id)
+        armies_left_to_add  = ADDED_ARMIES_PER_TURN
+        while armies_left_to_add != 0:
+            print("[Info] Reinforcements left: {}".format(armies_left_to_add))
+            validCity   = False
+            validArmies = False
+            while not validCity:
+                try:
+                    inputCity = input("[Q] Which city to reinforce? Choose from: {}\n\t".format(ownedCities))
+                    if inputCity in ownedCities:
+                        validCity = True
+                    else:
+                        print("[Error] Given city not owned by player")
+
+                except Exception:
+                    print("[Error] No valid city given")
+                    pass
+                
+               
+            while not validArmies:
+                try:
+                    armiesToAdd = int(input("[Q] How many armies to add to {}?\n\t".format(inputCity)))
+                    if armiesToAdd <= armies_left_to_add and armiesToAdd >= 0:
+                        cityObj = Region.get_vertex(inputCity)
+                        cityObj.add_armies(armiesToAdd)
+                        armies_left_to_add -= armiesToAdd
+                        print("[Info] Successful. Armies now in {}: ".format(inputCity), cityObj.armies)
+                        validArmies = True
+                    else:
+                        print("[Error] Invalid number of armies given. ")
+                except Exception:
+                    print("[Error] Invalid input")
+        return 0 #
+
     def ask_attack_fromto(self):
         print("Owned cities: ", Region.get_players_vertices(self.id)) 
         validFrom   = False
@@ -109,9 +148,10 @@ class Player():
 
 class Vertex:
     def __init__(self, name, ownedBy):
-        self.name = name
-        self.ownedBy = ownedBy
-        self.adjacent = {}
+        self.name       = name
+        self.ownedBy    = ownedBy
+        self.adjacent   = {}
+        self.armies     = 0
     def __str__(self):
         return str(self.name) + ' adjacent: ' + str([x.name for x in self.adjacent])
 
@@ -126,6 +166,9 @@ class Vertex:
 
     def get_weight(self, neighbor):
         return self.adjacent[neighbor]
+    
+    def add_armies(self, armiesToAdd):
+        self.armies += armiesToAdd
 
 
 class Graph:
