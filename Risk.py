@@ -1,5 +1,6 @@
+import os
 
-NR_OF_PLAYERS           = 4
+NR_OF_PLAYERS           = 3
 ADDED_ARMIES_PER_TURN   = 10
 
 class Manager():
@@ -12,6 +13,7 @@ class Manager():
         self.activePlayer   = self.players[0]
 
     def run(self):
+        os.system('cls' if os.name == 'nt' else 'clear')
         print(
 "\n-----------------------------------\n\
          Active player: {}\
@@ -19,8 +21,7 @@ class Manager():
             ".format(self.activePlayer.id))
        
         self.activePlayer.run()
-        if self.activePlayer.Finished == True:
-            self.next_player()
+        self.next_player()
 
     def next_player(self):
         playerNr = self.activePlayer.id
@@ -43,73 +44,85 @@ class Player():
     def __init__(self, id):
         self.armies     = 10
         self.id         = id
-        self.Finished   = False
 
     def run(self):
-        self.Finished = False
-        strategy = self.ask_strategy()
-        print("Player {} chose strategy: {}".format(self.id, strategy))
-
-        if strategy == 1:
-            self.ask_reinforce()
-
-        elif strategy == 2:   # attack strategy
-            self.ask_attack_fromto()
-
-        self.Finished = True
-
-    def ask_strategy(self):
-        strategyValid = False
-        while not strategyValid:
+        Finished        = False
+        self.ask_info()
+        while not Finished:
+            option = self.ask_option()
+            if option == 1:
+                self.ask_reinforce()
+                Finished = True
+            elif option == 2:  
+                self.ask_attack_fromto()
+                Finished = True
+        self.ask_info()
+        input("----- End of turn. Press a key to continue. -----")
+    def ask_option(self):
+        optionValid = False
+        while not optionValid:
             try:
                 userInput = int(input(\
-"Choose a strategy:\
-\n1) Reinforce armies\
-\n2) Attack\n\t--> "))  
+"Choose an option:\
+\n  1) Reinforce armies\
+\n  2) Attack\
+\n\t - "))\
 
-                strategyValid = True
+                optionValid = True
             except Exception:
                 print("no valid number given!")
                 pass
         return userInput
     
+    def ask_info(self):      
+        print("\n")          
+        for city in self.owned_cities():
+            cityObj = Region.get_vertex(city)
+            print("[Info] {} ==> {} armies".format(cityObj.name, cityObj.armies))
+        print("\n")
+
+    def ask_city_to_reinforce(self):
+        validCity   = False
+        while not validCity:
+            try:
+                inputCity = input("[Q] Which city to reinforce? Choose from: {}\n\t".format(self.owned_cities()))
+                if inputCity in self.owned_cities():
+                    validCity = True
+                else:
+                    print("[Error] Given city not owned by player")
+
+            except Exception:
+                print("[Error] No valid city given")
+                pass
+        return inputCity
+    
+    def ask_how_many_reinforcements(self, city, armiesLeftToAdd):
+        validArmies = False
+        while not validArmies:
+            try:
+                armiesToAdd = int(input("[Q] How many armies to add to {}?\n\t".format(city)))
+                if armiesToAdd <= armiesLeftToAdd and armiesToAdd >= 0:
+                    cityObj = Region.get_vertex(city)
+                    cityObj.add_armies(armiesToAdd)
+                    print("[Info] Successful. Armies now in {}: ".format(city), cityObj.armies)
+                    validArmies = True
+                else:
+                    print("[Error] Invalid number of armies given. ")
+            except Exception:
+                print("[Error] Invalid input")
+        return armiesToAdd
+
     def ask_reinforce(self):
-        ownedCities = Region.get_players_vertices(self.id)
         armies_left_to_add  = ADDED_ARMIES_PER_TURN
         while armies_left_to_add != 0:
             print("[Info] Reinforcements left: {}".format(armies_left_to_add))
-            validCity   = False
-            validArmies = False
-            while not validCity:
-                try:
-                    inputCity = input("[Q] Which city to reinforce? Choose from: {}\n\t".format(ownedCities))
-                    if inputCity in ownedCities:
-                        validCity = True
-                    else:
-                        print("[Error] Given city not owned by player")
-
-                except Exception:
-                    print("[Error] No valid city given")
-                    pass
-                
+            city = self.ask_city_to_reinforce()
+            armies_left_to_add -= self.ask_how_many_reinforcements(city, armies_left_to_add)
                
-            while not validArmies:
-                try:
-                    armiesToAdd = int(input("[Q] How many armies to add to {}?\n\t".format(inputCity)))
-                    if armiesToAdd <= armies_left_to_add and armiesToAdd >= 0:
-                        cityObj = Region.get_vertex(inputCity)
-                        cityObj.add_armies(armiesToAdd)
-                        armies_left_to_add -= armiesToAdd
-                        print("[Info] Successful. Armies now in {}: ".format(inputCity), cityObj.armies)
-                        validArmies = True
-                    else:
-                        print("[Error] Invalid number of armies given. ")
-                except Exception:
-                    print("[Error] Invalid input")
         return 0 #
 
     def ask_attack_fromto(self):
-        print("Owned cities: ", Region.get_players_vertices(self.id)) 
+        print("Owned cities: ", self.owned_cities()) 
         validFrom   = False
         validTo     = False
         validFromTo = False
@@ -145,6 +158,9 @@ class Player():
             return False
         else:
             return True
+
+    def owned_cities(self):
+        return Region.get_players_vertices(self.id)
 
 class Vertex:
     def __init__(self, name, ownedBy):
@@ -219,15 +235,17 @@ class Graph:
 Region = Graph()
 
 Region.add_vertex('Groningen', 0)  
+Region.add_vertex('Delfzijl', 0)  
 Region.add_vertex('Leeuwarden', 1)
 Region.add_vertex('Assen',  2)
 
+Region.add_edge('Groningen', 'Delfzijl')
 Region.add_edge('Groningen', 'Leeuwarden')
 Region.add_edge('Groningen', 'Assen')
 
-print("vertex list: ", Region.get_vertex_list('Groningen'))
-print(Region.get_vertex('Assen'))
-print(Region.get_vertex_owner('Groningen'))
+#print("vertex list: ", Region.get_vertex_list('Groningen'))
+#print(Region.get_vertex('Assen'))
+#print(Region.get_vertex_owner('Groningen'))
 
 manager = Manager(NR_OF_PLAYERS)
 while True:
