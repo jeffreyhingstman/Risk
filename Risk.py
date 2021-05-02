@@ -130,18 +130,18 @@ class Player():
             while not validFrom:
                 frm = input("From which city do you want to attack: \n\t--> ")
                 if Region.get_vertex_owner(frm) != self.id:
-                    print("Attempting to attack from city that is not owned by you!") 
+                    print("[Invalid] Attempting to attack from city that is not owned by you!") 
                 else:
                     validFrom = True
             while not (validTo and validFromTo):
-                print("Attackable cities from {}: ".format(frm), Region.get_vertex_list(frm))
+                print("Attackable cities from {}: ".format(frm), self.get_attackable_from(frm))
                 to = input("Which city do you want to attack: \n\t--> ")
                 if Region.get_vertex_owner(to) == self.id:
-                    print("Attempting to attack city that is not adjacent")
+                    print("[Invalid] Attempting to attack city that is owned by you!")
                 else:
                     validTo = True
                 if to not in Region.get_vertex_list(frm):
-                    print("Attempting to attack city that is not adjacent")
+                    print("[Invalid] Attempting to attack city that is not adjacent")
                 else:
                     validFromTo = True
             print("Player {} attacks {} from {}".format(self.id, to, frm))
@@ -151,6 +151,12 @@ class Player():
             pass
         return frm, to
 
+    def get_attackable_from(self, frm):
+        attackable = []
+        for city in Region.get_vertex_list(frm):
+            if Region.get_vertex_owner(city) != self.id:
+                attackable.append(city)
+        return attackable
 
     def check_attack_combi(self, frm, to):
         if to not in Region.get_vertex_list(frm):
